@@ -1,12 +1,12 @@
 # k8s-kafka
 
-Docker container to run `kafka` (0.8.1.1) in an Ubuntu container (java7) with configuration settings from the environment.
+Docker container to run `kafka` (0.8.2.1) in an Ubuntu container (java8) with configuration settings from the environment.
 
 ## environment
 
 The names of these environment variables are carefully chosen for compatibility with what Kubernetes (primarily GKE) provides for defined services.
 
-* `KAFKA_SERVER_ID`: required, integer 1..cluster size
+* `KAFKA_SERVER_ID`: defaults to 1, integer 1..cluster size
 * for each Kafka instance in the cluster
   * `KAFKA_CLIENT_<i>_SERVICE_HOST`: IP address of the etcd instance
   * `KAFKA_CLIENT_<i>_SERVICE_PORT`: port number of the etcd client service (4001)
