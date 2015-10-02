@@ -1,9 +1,9 @@
 # Dockerfile for running a Kafka ensemble (primarily in Kubernetes)
-# - Apache Kafka 0.8.1.1 from binary distribution.
-# - Oracle Java 7 and a base of Ubuntu 12.04, currently.
+# - Apache Kafka 0.8.2.1 from binary distribution.
+# - OpenJDK Java 8 and a base of Ubuntu 14.04
 #
 
-FROM relateiq/oracle-java7
+FROM java:8-jre
 
 MAINTAINER Graeme Johnson <graeme@johnson-family.ca>
 
@@ -12,11 +12,11 @@ RUN \
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates
 
-ENV KAFKA_RELEASE_ARCHIVE kafka_2.10-0.8.1.1.tgz
+ENV KAFKA_RELEASE_ARCHIVE kafka_2.11-0.8.2.1.tgz
 
 # Download Kafka binary distribution
-ADD http://www.us.apache.org/dist/kafka/0.8.1.1/${KAFKA_RELEASE_ARCHIVE} /tmp/
-ADD https://dist.apache.org/repos/dist/release/kafka/0.8.1.1/${KAFKA_RELEASE_ARCHIVE}.md5 /tmp/
+ADD http://www.us.apache.org/dist/kafka/0.8.2.1/${KAFKA_RELEASE_ARCHIVE} /tmp/
+ADD https://dist.apache.org/repos/dist/release/kafka/0.8.2.1/${KAFKA_RELEASE_ARCHIVE}.md5 /tmp/
 
 WORKDIR /tmp
 
@@ -47,4 +47,3 @@ EXPOSE 9092 7203
 VOLUME [ "/data", "/logs" ]
 
 ENTRYPOINT ["/kafka/config-and-run.sh"]
-CMD [""]
