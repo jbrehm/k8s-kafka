@@ -22,7 +22,6 @@ if [ ! -z "$SERVER_ID" ] ; then
   export ADVERTISED_PORT=${KAFKA_ADVERTISED_PORT:-9092}
 
   # Find the zookeepers exposed in env.
-  ZOOKEEPER_CONNECT=""
   for i in `seq 1 15`; do
     ZK_CLIENT_HOST=`envValue ZK_CLIENT_${i}_SERVICE_HOST`
     ZK_CLIENT_PORT=`envValue ZK_CLIENT_${i}_SERVICE_PORT`
