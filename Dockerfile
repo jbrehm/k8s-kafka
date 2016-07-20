@@ -1,49 +1,36 @@
 # Dockerfile for running a Kafka ensemble (primarily in Kubernetes)
+# - Mashup of wurstmeister and graeme johnson's k8s-kafka
 # - Apache Kafka 0.8.2.1 from binary distribution.
-# - OpenJDK Java 8 and a base of Ubuntu 14.04
-#
+# - Base of Alpine Linux (small) 
+FROM anapsix/alpine-java 
 
-FROM java:8-jre
+MAINTAINER Justin Brehm <jbrehm@reverbnation.com>
 
-MAINTAINER Graeme Johnson <graeme@johnson-family.ca>
+RUN mkdir -p /opt/kafka /data /logs \
+    && apk add --update unzip wget curl docker jq coreutils gnupg
 
-RUN \
-  mkdir /kafka /data /logs && \
-  apt-get update && \
-  DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates
-
-ENV KAFKA_RELEASE_ARCHIVE kafka_2.11-0.8.2.1.tgz
+ENV KAFKA_VERSION="0.8.2.1" SCALA_VERSION="2.11"
 
 # Download Kafka binary distribution
-ADD http://www.us.apache.org/dist/kafka/0.8.2.1/${KAFKA_RELEASE_ARCHIVE} /tmp/
-ADD https://dist.apache.org/repos/dist/release/kafka/0.8.2.1/${KAFKA_RELEASE_ARCHIVE}.md5 /tmp/
+ADD http://www.us.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz /tmp/
+ADD https://dist.apache.org/repos/dist/release/kafka/${KAFKA_VERSION}/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz.asc /tmp/
+RUN echo VERIFY DOWNLOAD: && \
+  gpg --recv-keys E0A61EEA && \
+  gpg --verify /tmp/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz.asc /tmp/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz 2>/dev/null && \
+  tar -zx -C /opt -f /tmp/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz && rm -rf /tmp/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz.*
 
-WORKDIR /tmp
+ENV KAFKA_HOME /opt/kafka_${SCALA_VERSION}-${KAFKA_VERSION}
+WORKDIR $KAFKA_HOME
 
-# Check artifact digest integrity
-RUN echo VERIFY CHECKSUM: && \
-  gpg --print-md MD5 ${KAFKA_RELEASE_ARCHIVE} 2>/dev/null && \
-  cat ${KAFKA_RELEASE_ARCHIVE}.md5
+ADD http://repo1.maven.org/maven2/org/slf4j/slf4j-log4j12/1.7.6/slf4j-log4j12-1.7.6.jar ${KAFKA_HOME}/libs/
+ADD config ${KAFKA_HOME}/config
+ADD config-and-run.sh ${KAFKA_HOME}
 
-# Install Kafka to /kafka
-RUN tar -zx -C /kafka --strip-components=1 -f ${KAFKA_RELEASE_ARCHIVE} && \
-  rm -rf kafka_*
-
-ADD http://repo1.maven.org/maven2/org/slf4j/slf4j-log4j12/1.7.6/slf4j-log4j12-1.7.6.jar /kafka/libs/
-ADD config /kafka/config
-ADD config-and-run.sh /kafka/
-
-# Set up a user to run Kafka
-RUN groupadd kafka && \
-  useradd -d /kafka -g kafka -s /bin/false kafka && \
-  chown -R kafka:kafka /kafka /data /logs
-USER kafka
-ENV PATH /kafka/bin:$PATH
-WORKDIR /kafka
+ENV PATH ${KAFKA_HOME}/bin:$PATH
 
 # primary, jmx
 EXPOSE 9092 7203
 
 VOLUME [ "/data", "/logs" ]
 
-ENTRYPOINT ["/kafka/config-and-run.sh"]
+ENTRYPOINT ["./config-and-run.sh"]

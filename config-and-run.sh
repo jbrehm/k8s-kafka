@@ -26,8 +26,10 @@ if [ ! -z "$SERVER_ID" ] ; then
   for i in `seq 1 15`; do
     ZK_CLIENT_HOST=`envValue ZK_CLIENT_${i}_SERVICE_HOST`
     ZK_CLIENT_PORT=`envValue ZK_CLIENT_${i}_SERVICE_PORT`
+    ZK_CLIENT_HOST=`envValue ZOOKEEPER_${i}_PORT_2181_TCP_ADDR`
+    ZK_CLIENT_PORT=`envValue ZOOKEEPER_${i}_PORT_2181_TCP_PORT`
 
-    if [ -z "$ZK_CLIENT_HOST" ] || [ -z "$ZK_CLIENT_PORT" ] ; then
+    if [ -z "$ZK_CLIENT_HOST" ] || [ -z "$ZK_CLIENT_PORT" ] ; then 
       break
     else
       if [ ! -z $ZOOKEEPER_CONNECT ] ; then
@@ -36,22 +38,28 @@ if [ ! -z "$SERVER_ID" ] ; then
       ZOOKEEPER_CONNECT="${ZOOKEEPER_CONNECT}${ZK_CLIENT_HOST}:${ZK_CLIENT_PORT}"
     fi
   done
+
+  if [ ! -z "${NAMESPACE+x}" ]; then
+    ZOOKEEPER_CONNECT="${ZOOKEEPER_CONNECT}/${NAMESPACE}"
+  fi
 fi
 
 NUM_PARTITIONS=${NUM_PARTITIONS:-2}
 
 # Build the server configuration
-KAFKA_PROPERTIES=/kafka/config/server.properties
+KAFKA_PROPERTIES=${KAFKA_HOME}/config/server.properties
 sed -i "s|{{BROKER_ID}}|${SERVER_ID}|g" $KAFKA_PROPERTIES 
 sed -i "s|{{ADVERTISED_HOST_NAME}}|${ADVERTISED_HOST_NAME}|g" $KAFKA_PROPERTIES
 sed -i "s|{{ADVERTISED_PORT}}|${ADVERTISED_PORT}|g" $KAFKA_PROPERTIES
 sed -i "s|{{ZOOKEEPER_CONNECT}}|${ZOOKEEPER_CONNECT}|g" $KAFKA_PROPERTIES
 sed -i "s|{{NUM_PARTITIONS}}|${NUM_PARTITIONS}|g" $KAFKA_PROPERTIES
 
-export CLASSPATH=$CLASSPATH:/kafka/lib/slf4j-log4j12.jar
+export CLASSPATH=$CLASSPATH:${KAFKA_HOME}/lib/slf4j-log4j12.jar
 export JMX_PORT=7203
 
-cat /kafka/config/server.properties
+cat ${KAFKA_HOME}/config/server.properties
+
+trap "$KAFKA_HOME/bin/kafka-server-stop.sh; echo 'Kafka stopped.'; exit" SIGHUP SIGINT SIGTERM
 
 echo "Starting kafka"
-exec /kafka/bin/kafka-server-start.sh /kafka/config/server.properties
+${KAFKA_HOME}/bin/kafka-server-start.sh ${KAFKA_HOME}/config/server.properties
